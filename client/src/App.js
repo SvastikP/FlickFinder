@@ -60,7 +60,7 @@ export default function App() {
     }
   }
 
-  // Load all rated movies
+  // load all the movies that have been rated
   async function handleLoadRatedMovies() {
     setOnlyRated(true);
     setLoadingSearch(true);

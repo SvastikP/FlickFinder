@@ -125,7 +125,7 @@ def movie_details():
         "overview": movie_row["overview"],
         "average_rating": average_rating,
     })
-
+#get movies only with their ratings
 @app.route("/rated-movies")
 def get_rated_movies():
     conn = get_connection()
