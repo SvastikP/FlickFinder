@@ -126,6 +126,57 @@ def movie_details():
         "average_rating": average_rating,
     })
 
+@app.route("/rated-movies")
+def get_rated_movies():
+    conn = get_connection()
+    cur = conn.cursor()
+
+    query = """
+            SELECT
+                m.id,
+                m.original_title,
+                m.overview,
+                AVG(r.rating) AS average_rating,
+                COUNT(r.rating) AS rating_count
+            FROM movies_metadata m
+                     JOIN ratings r
+                          ON r.movieId = m.id
+            GROUP BY m.id, m.original_title, m.overview
+            ORDER BY average_rating DESC \
+            """
+
+    cur.execute(query)
+    rows = cur.fetchall()
+    conn.close()
+
+    results = [
+        {
+            "id": row["id"],
+            "original_title": row["original_title"],
+            "overview": row["overview"],
+            "average_rating": row["average_rating"],
+            "rating_count": row["rating_count"],
+        }
+        for row in rows
+    ]
+
+    return jsonify(results)
+
+
+conn = sqlite3.connect(DB_PATH)
+cur = conn.cursor()
+
+# total rows from metadent
+print("movies_metadata count:", cur.execute("SELECT COUNT(*) FROM movies_metadata").fetchone()[0])
+# total rows from ratings
+print("ratings count:", cur.execute("SELECT COUNT(*) FROM ratings").fetchone()[0])
+# total rows from joined tables
+print("joined count (r.movieId = m.id):", cur.execute(
+    "SELECT COUNT(*) FROM ratings r JOIN movies_metadata m ON r.movieId = m.id"
+).fetchone()[0])
+
+conn.close()
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True, port=4000)

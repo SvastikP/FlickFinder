@@ -6,16 +6,24 @@ export default function App() {
   const [title, setTitle] = useState('');
   const [results, setResults] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+  const [onlyRated, setOnlyRated] = useState(false);
   const [error, setError] = useState(null);
 
   const [view, setView] = useState('search'); // 'search' or 'details'
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // 🔍 Search movies by title
+  function normalizeResults(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.results && Array.isArray(data.results)) return data.results;
+    return [];
+  }
+
+  // 🔍 Search movies by title — respects the "Only rated" toggle
   async function handleSearch(e) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() && !onlyRated) return; // if empty and not only-rated, do nothing
 
     setLoadingSearch(true);
     setError(null);
@@ -24,15 +32,48 @@ export default function App() {
     setView('search');
 
     try {
-      const res = await fetch(
-        `${API_BASE}/movie/search?title=${encodeURIComponent(title)}`
-      );
-      if (!res.ok) {
-        throw new Error(`Search failed with status ${res.status}`);
+      let url;
+      if (onlyRated) {
+        // ask server for rated movies
+        url = `${API_BASE}/rated-movies` + (title.trim() ? `?title=${encodeURIComponent(title.trim())}` : '');
+      } else {
+        url = `${API_BASE}/movie/search?title=${encodeURIComponent(title.trim())}`;
       }
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Search failed with status ${res.status}`);
       const data = await res.json();
-      // expecting backend: { results: [...] }
-      setResults(data.results || []);
+      let items = normalizeResults(data);
+
+      // fallback client-side filter if server returned all rated movies without filtering
+      if (onlyRated && title.trim()) {
+        const q = title.trim().toLowerCase();
+        items = items.filter(m => (m.original_title || m.title || '').toLowerCase().includes(q));
+      }
+
+      setResults(items);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoadingSearch(false);
+    }
+  }
+
+  // Load all rated movies
+  async function handleLoadRatedMovies() {
+    setOnlyRated(true);
+    setLoadingSearch(true);
+    setError(null);
+    setResults([]);
+    setSelectedMovie(null);
+    setView('search');
+
+    try {
+      const res = await fetch(`${API_BASE}/rated-movies`);
+      if (!res.ok) throw new Error(`Failed to load rated movies`);
+      const data = await res.json();
+      setResults(normalizeResults(data));
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -46,18 +87,11 @@ export default function App() {
     setLoadingDetails(true);
     setError(null);
     setSelectedMovie(null);
-  
+
     try {
       const titleParam = encodeURIComponent(movie.original_title || movie.title);
-  
-      const res = await fetch(
-        `${API_BASE}/movie/details?title=${titleParam}`
-      );
-  
-      if (!res.ok) {
-        throw new Error(`Details failed with status ${res.status}`);
-      }
-  
+      const res = await fetch(`${API_BASE}/movie/details?title=${titleParam}`);
+      if (!res.ok) throw new Error(`Details failed with status ${res.status}`);
       const data = await res.json();
       setSelectedMovie(data);
       setView('details');
@@ -74,7 +108,6 @@ export default function App() {
     setView('search');
     setSelectedMovie(null);
   }
-
   return (
     <div
       style={{
@@ -114,6 +147,14 @@ export default function App() {
                 borderRadius: '4px',
               }}
             />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginRight: '0.5rem' }}>
+              <input
+                  type="checkbox"
+                  checked={onlyRated}
+                  onChange={e => setOnlyRated(e.target.checked)}
+              />
+              <span style={{ fontSize: '0.9rem' }}>Only rated</span>
+            </label>
             <button
               type="submit"
               disabled={loadingSearch}
@@ -246,6 +287,22 @@ export default function App() {
           )}
         </div>
       )}
+
+      <button
+          onClick={handleLoadRatedMovies}
+          disabled={loadingSearch}
+          style={{
+            padding: '0.5rem 1rem',
+            fontSize: '1rem',
+            borderRadius: '4px',
+            border: '1px solid #ccc',
+            background: '#e8f0fe',
+            cursor: loadingSearch ? 'default' : 'pointer',
+            marginLeft: '0.5rem'
+          }}
+      >
+        Load Rated Movies
+      </button>
     </div>
   );
 }
