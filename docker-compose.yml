@@ -1,7 +1,7 @@
 services:
   client:
     build:
-      context: /client
+      context: client
       dockerfile: dockerfile
     ports:
       - "3000:3000"
@@ -9,9 +9,7 @@ services:
       - server
   server:
     build:
-      context: /server
+      context: server
       dockerfile: dockerfile
     ports:
       - "4000:4000"
-    depends_on:
-      - database
