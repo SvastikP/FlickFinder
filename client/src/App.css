@@ -1,5 +1,29 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Bebas+Neue&display=swap');
+
 .App {
   text-align: center;
+}
+
+body, .App, .container, input, button, .form-control {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #f8f9fa;
+}
+
+.navbar-brand {
+  font-family: 'Bebas Neue', 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: 1px;
+  color: #fff !important;
+  text-transform: none;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 
 .App-logo {
@@ -22,6 +46,32 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+}
+
+body {
+  background-image: url('./components/movieBackground.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-color: #000;
+  color: #fff;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55));
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: inset 0 80px 120px rgba(34, 33, 33, 0.55), inset 0 -80px 120px rgba(34, 33, 33, 0.55);
+  backdrop-filter: blur(2px); 
+}
+
+.container, .navbar, .card, #root, #app, .App {
+  position: relative;
+  z-index: 1;
 }
 
 .App-link {
