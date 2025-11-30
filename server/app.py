@@ -128,6 +128,8 @@ def movie_details():
 #get movies only with their ratings
 @app.route("/rated-movies")
 def get_rated_movies():
+    title = request.args.get("title", "").strip().lower() #Used for sort
+
     conn = get_connection()
     cur = conn.cursor()
 
@@ -139,13 +141,21 @@ def get_rated_movies():
                 AVG(r.rating) AS average_rating,
                 COUNT(r.rating) AS rating_count
             FROM movies_metadata m
-                     JOIN ratings r
-                          ON r.movieId = m.id
-            GROUP BY m.id, m.original_title, m.overview
-            ORDER BY average_rating DESC \
+            JOIN ratings r ON r.movieId = m.id
             """
+    #Implementation for sort to work along with display only movies with ratings
+    params = []
 
-    cur.execute(query)
+    if title:
+        query += " WHERE LOWER(m.original_title) LIKE ?"
+        params.append(f"%{title}%")
+
+    query += """
+        GROUP BY m.id, m.original_title, m.overview
+        ORDER BY average_rating DESC
+    """
+
+    cur.execute(query, params)
     rows = cur.fetchall()
     conn.close()
 
@@ -161,6 +171,89 @@ def get_rated_movies():
     ]
 
     return jsonify(results)
+
+#Sort movies in alphabetical, release date, and rating and in ASC and DESC order each
+#Displays only rated movies if checkbox is active
+@app.route("/sort-movies")
+def sort_movies():
+    title = request.args.get("title", "").strip().lower()
+    #Default sort setting
+    sort = request.args.get("sort", "").strip()
+    order = request.args.get("order", "").strip()
+
+    #Used to toggle movies with ratings
+    rated_only_param = request.args.get("rated_only") or request.args.get("onlyRated")
+    rated_only = (rated_only_param or "").lower() == "true"
+
+    if sort == "title":
+        column = "m.original_title"
+    elif sort == "year":
+        column = "m.release_date"
+    elif sort == "rating":
+        column = "average_rating" if rated_only else "m.vote_average"
+    else:
+        column = "m.original_title"
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    #Display only rated movies
+    if rated_only:
+        query = f"""
+            SELECT
+                m.id,
+                m.original_title,
+                m.release_date,
+                AVG(r.rating) AS average_rating,
+                COUNT(r.rating) AS rating_count
+            FROM movies_metadata m
+            JOIN ratings r ON r.movieId = m.id
+        """
+
+        params = []
+
+        #filter
+        if title:
+            query += " WHERE LOWER(m.original_title) LIKE ?"
+            params.append(f"%{title}%")
+
+        query += f"""
+            GROUP BY m.id, m.original_title, m.release_date
+            ORDER BY {column} {order.upper()}
+        """
+
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        conn.close()
+
+        return jsonify([
+            {
+                "id": row["id"],
+                "original_title": row["original_title"],
+                "release_date": row["release_date"],
+                "average_rating": row["average_rating"],
+                "rating_count": row["rating_count"],
+            }
+            for row in rows
+        ])
+
+    #Include movies with no rating
+    query = f"""
+        SELECT id, original_title, release_date, vote_average, vote_count
+        FROM movies_metadata m
+    """
+    params = []
+
+    if title:
+        query += " WHERE LOWER(original_title) LIKE ?"
+        params.append(f"%{title}%")
+
+    query += f" ORDER BY {column} {order.upper()}"
+
+    df = pd.read_sql_query(query, conn, params=params)
+    conn.close()
+
+    return df.to_json(orient="records")
 
 
 conn = sqlite3.connect(DB_PATH)

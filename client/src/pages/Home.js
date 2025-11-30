@@ -25,6 +25,9 @@ function Home() {
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
+    const [sort, setSort] = useState("title");
+    const [order, setOrder] = useState("asc");
+
     function normalizeResults(data) {
         if (!data) return [];
         if (Array.isArray(data)) return data;
@@ -115,6 +118,108 @@ function Home() {
         }
     }
 
+    //Helper function for sort
+    //Changes the button label of each sort in ASC or DESC order
+    //When sort is changed by default sort goes to ASC order
+    function getSortButtonLabel(column) {
+        if (column === "title") {
+            if (sort === "title") {
+                if (order === "asc") { //Actively change sort
+                    return "A–Z";
+                } else {
+                    return "Z–A";
+                }
+            } else {                
+                return "A–Z"; //Change back to default view
+            }
+        }
+
+        if (column === "year") {
+            if (sort === "year") {
+                if (order === "asc") { //Actively change sort
+                    return "Oldest Release";
+                } else {
+                    return "Newest Release";
+                }
+            } else {
+                return "Newest Release"; //Change back to default view
+            }
+        }
+
+        if (column === "rating") {
+            if (sort === "rating") {
+                if (order === "asc") { //Actively change sort
+                    return "Lowest Rated";
+                } else {
+                    return "Highest Rated";
+                }
+            } else {
+                return "Highest Rated"; //Change back to default view
+            }
+        }
+
+        return column;
+    }
+
+    //Helper function for sort
+    //Changes between primary and secondary color to distinguish which sort is currently active
+    //primary is active seconday is inactive
+    function getSortButtonVariant(column) {
+        if (sort === column) {
+            return "primary";
+        } else {
+            return "secondary";
+        }
+    }
+
+    //Helper function for sort
+    //Changes between asc and desc sort for current active sort
+    //By default sort is asc and changes back when new sort is active
+    function toggleSort(column) {
+        if (sort === column) { //Change order for given sort and update values
+            let newOrder;
+            if (order === "asc") {
+                newOrder = "desc";
+            } else {
+                newOrder = "asc";
+            }
+            setOrder(newOrder);
+            handleSort(column, newOrder);
+        } else { //Change to asc for default setting for given sort and update values
+            setSort(column);
+
+            let defaultOrder = "asc";
+            if (column === "year" || column === "rating") {
+                defaultOrder = "desc";
+            }
+
+            setOrder(defaultOrder);
+            handleSort(column, defaultOrder);
+        }
+    }
+
+    //Sort function
+    async function handleSort(sort, order) {
+        setLoadingSearch(true);
+        setError(null);
+        setResults([]);
+        setSelectedMovie(null);
+        setView("search");
+
+        try {
+            const url = `${API_BASE}/sort-movies?sort=${sort}&order=${order}&onlyRated=${onlyRated}&title=${encodeURIComponent(title.trim())}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Sort failed with status ${res.status}`);
+            const data = await res.json();
+            setResults(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setLoadingSearch(false);
+        }
+    }
+
     function handleBackToSearch() {
         setView('search');
         setSelectedMovie(null);
@@ -183,6 +288,30 @@ function Home() {
                     {!loadingSearch && results.length > 0 && (
                         <>
                             <h2 className="h5">Results</h2>
+
+                            <div className="mb-3 d-flex gap-2">
+                                <Button
+                                variant={getSortButtonVariant("title")}
+                                onClick={() => toggleSort("title")}
+                                >
+                                {getSortButtonLabel("title")}
+                                </Button>
+
+                                <Button
+                                variant={getSortButtonVariant("year")}
+                                onClick={() => toggleSort("year")}
+                                >
+                                {getSortButtonLabel("year")}
+                                </Button>
+
+                                <Button
+                                variant={getSortButtonVariant("rating")}
+                                onClick={() => toggleSort("rating")}
+                                >
+                                {getSortButtonLabel("rating")}
+                                </Button>
+                            </div>
+
                             <ListGroup className="mb-3">
                                 {results.map(movie => (
                                     <ListGroup.Item
