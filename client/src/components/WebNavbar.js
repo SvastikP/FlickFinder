@@ -12,7 +12,7 @@ function WebNavbar() {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
             <Nav.Link href="/">Movie Search</Nav.Link>
-            <Nav.Link href="/">Genres</Nav.Link>
+            <Nav.Link href="/genres">Genres</Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>

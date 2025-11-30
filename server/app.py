@@ -271,5 +271,66 @@ print("joined count (r.movieId = m.id):", cur.execute(
 conn.close()
 
 
+@app.route("/genres")
+def get_genres(): 
+    valid_genres = [
+        {"id": 28, "name": "Action"},
+        {"id": 12, "name": "Adventure"},
+        {"id": 16, "name": "Animation"},
+        {"id": 35, "name": "Comedy"},
+        {"id": 80, "name": "Crime"},
+        {"id": 99, "name": "Documentary"},
+        {"id": 18, "name": "Drama"},
+        {"id": 10751, "name": "Family"},
+        {"id": 14, "name": "Fantasy"},
+        {"id": 36, "name": "History"},
+        {"id": 27, "name": "Horror"},
+        {"id": 10402, "name": "Music"},
+        {"id": 9648, "name": "Mystery"},
+        {"id": 10749, "name": "Romance"},
+        {"id": 878, "name": "Science Fiction"},
+        {"id": 10770, "name": "TV Movie"},
+        {"id": 53, "name": "Thriller"},
+        {"id": 10752, "name": "War"},
+        {"id": 37, "name": "Western"}
+    ]   
+    return jsonify(valid_genres)
+
+
+@app.route("/movies/by-genre")
+def get_movies_by_genre():
+    genre_id = request.args.get("id")
+    
+
+    conn = get_connection()
+    cur = conn.cursor()
+    
+
+    search_pattern = f"%'id': {genre_id}%"
+    query = """
+        SELECT 
+            m.id,
+            m.original_title,
+            m.overview
+        FROM movies_metadata m
+        WHERE m.genres LIKE ?
+    """
+    cur.execute(query, (search_pattern,))
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    results = [
+        {
+            "id": row["id"],
+            "original_title": row["original_title"],
+            "overview": row["overview"]
+        }
+        for row in rows
+    ]
+    
+    return jsonify(results)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True, port=4000)
