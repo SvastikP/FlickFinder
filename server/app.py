@@ -172,12 +172,12 @@ def get_rated_movies():
 
     return jsonify(results)
 
-#Sort movies in alphabetical, release date, and rating and in ASC and DESC order each
-#Displays only rated movies if checkbox is active
+# Sort movies in alphabetical, release date, and rating and in ASC and DESC order each
+# Displays only rated movies if checkbox is active, and can filter by title or genre
 @app.route("/sort-movies")
 def sort_movies():
     title = request.args.get("title", "").strip().lower()
-    #Default sort setting
+    genre_id = request.args.get("genreId", "").strip()
     sort = request.args.get("sort", "").strip()
     order = request.args.get("order", "").strip()
 
@@ -185,10 +185,11 @@ def sort_movies():
     rated_only_param = request.args.get("rated_only") or request.args.get("onlyRated")
     rated_only = (rated_only_param or "").lower() == "true"
 
+    #Decide which column to sort by
     if sort == "title":
         column = "m.original_title"
     elif sort == "year":
-        column = "m.release_date"
+        column = "DATE(m.release_date)"  
     elif sort == "rating":
         column = "average_rating" if rated_only else "m.vote_average"
     else:
@@ -196,9 +197,12 @@ def sort_movies():
 
     conn = get_connection()
     cur = conn.cursor()
+    params = []
+    conditions = []
 
-    #Display only rated movies
+
     if rated_only:
+        #Query only rated movies
         query = f"""
             SELECT
                 m.id,
@@ -210,12 +214,16 @@ def sort_movies():
             JOIN ratings r ON r.movieId = m.id
         """
 
-        params = []
-
-        #filter
+        #Apply filters
         if title:
-            query += " WHERE LOWER(m.original_title) LIKE ?"
+            conditions.append("LOWER(m.original_title) LIKE ?")
             params.append(f"%{title}%")
+        if genre_id:
+            conditions.append("m.genres LIKE ?")
+            params.append(f"%'id': {genre_id}%")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
 
         query += f"""
             GROUP BY m.id, m.original_title, m.release_date
@@ -237,16 +245,23 @@ def sort_movies():
             for row in rows
         ])
 
-    #Include movies with no rating
+
+    #Include movies with no ratings
     query = f"""
         SELECT id, original_title, release_date, vote_average, vote_count
         FROM movies_metadata m
     """
-    params = []
 
+    #Apply filters
     if title:
-        query += " WHERE LOWER(original_title) LIKE ?"
+        conditions.append("LOWER(original_title) LIKE ?")
         params.append(f"%{title}%")
+    if genre_id:
+        conditions.append("m.genres LIKE ?")
+        params.append(f"%'id': {genre_id}%")
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
 
     query += f" ORDER BY {column} {order.upper()}"
 

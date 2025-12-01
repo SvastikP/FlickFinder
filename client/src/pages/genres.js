@@ -24,6 +24,11 @@ function Genres() {
     const [view, setView] = useState('genres');
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const [onlyRated, setOnlyRated] = useState(false);
+
+    const [sort, setSort] = useState("title");
+    const [order, setOrder] = useState("asc");
  
     useEffect(() => {
         fetchGenres();
@@ -119,6 +124,109 @@ function Genres() {
         handleMovieClick(randomMovie);
     }
 
+    //Helper function for sort
+    //Changes the button label of each sort in ASC or DESC order
+    //When sort is changed by default sort goes to ASC order
+    function getSortButtonLabel(column) {
+        if (column === "title") {
+            if (sort === "title") {
+                if (order === "asc") { //Actively change sort
+                    return "A–Z";
+                } else {
+                    return "Z–A";
+                }
+            } else {                
+                return "A–Z"; //Change back to default view
+            }
+        }
+
+        if (column === "year") {
+            if (sort === "year") {
+                if (order === "asc") { //Actively change sort
+                    return "Oldest Release";
+                } else {
+                    return "Newest Release";
+                }
+            } else {
+                return "Newest Release"; //Change back to default view
+            }
+        }
+
+        if (column === "rating") {
+            if (sort === "rating") {
+                if (order === "asc") { //Actively change sort
+                    return "Lowest Rated";
+                } else {
+                    return "Highest Rated";
+                }
+            } else {
+                return "Highest Rated"; //Change back to default view
+            }
+        }
+
+        return column;
+    }
+
+    //Helper function for sort
+    //Changes between primary and secondary color to distinguish which sort is currently active
+    //primary is active, secondary is inactive
+    function getSortButtonVariant(column) {
+        if (sort === column) {
+            return "primary";
+        } else {
+            return "secondary";
+        }
+    }
+
+    //Helper function for sort
+    //Changes between asc and desc sort for current active sort
+    //By default sort is asc and changes back when new sort is active
+    function toggleSort(column) {
+        if (sort === column) { //Change order for given sort and update values
+            let newOrder;
+            if (order === "asc") {
+                newOrder = "desc";
+            } else {
+                newOrder = "asc";
+            }
+            setOrder(newOrder);
+            handleSort(column, newOrder);
+        } else { //Change to asc for default setting for given sort and update values
+            setSort(column);
+
+            let defaultOrder = "asc";
+            if (column === "year" || column === "rating") {
+                defaultOrder = "desc";
+            }
+
+            setOrder(defaultOrder);
+            handleSort(column, defaultOrder);
+        }
+    }
+
+    //Sort function
+    //Fetches sorted movies from backend, applies onlyRated and genre filter
+    async function handleSort(sort, order) {
+        setLoadingMovies(true);
+        setError(null);
+        setMovies([]);
+        setSelectedMovie(null);
+        setView("movies");
+
+        try {
+            const url = `${API_BASE}/sort-movies?sort=${sort}&order=${order}&onlyRated=${onlyRated}&title=${encodeURIComponent(searchTerm.trim())}&genreId=${selectedGenre.id}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Sort failed with status ${res.status}`);
+            const data = await res.json();
+            setMovies(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            setLoadingMovies(false);
+        }
+    }
+
     const filteredMovies = searchTerm.trim()
         ? movies.filter(movie => 
             (movie.original_title || movie.title || '')
@@ -181,6 +289,16 @@ function Genres() {
                                 onChange={handleSearchChange}
                             />
                         </Col>
+                        <Col xs="auto" className="d-flex align-items-center">
+                            <Form.Check
+                                type="checkbox"
+                                id="onlyRatedCheck"
+                                label="Only rated"
+                                checked={onlyRated}
+                                onChange={e => setOnlyRated(e.target.checked)}
+                                className="me-2"
+                            />
+                        </Col>
                         <Col xs="auto">
                             <Button 
                                 onClick={handleRandomMovie} 
@@ -192,6 +310,29 @@ function Genres() {
                         </Col>
                     </Row>
                     
+                    <div className="mb-3 d-flex gap-2">
+                        <Button
+                        variant={getSortButtonVariant("title")}
+                        onClick={() => toggleSort("title")}
+                        >
+                        {getSortButtonLabel("title")}
+                        </Button>
+
+                        <Button
+                        variant={getSortButtonVariant("year")}
+                        onClick={() => toggleSort("year")}
+                        >
+                        {getSortButtonLabel("year")}
+                        </Button>
+
+                        <Button
+                        variant={getSortButtonVariant("rating")}
+                        onClick={() => toggleSort("rating")}
+                        >
+                        {getSortButtonLabel("rating")}
+                        </Button>
+                    </div>                        
+
                     {loadingMovies ? (
                         <div className="mb-3">
                             <Spinner animation="border" role="status" size="sm" className="me-2" />
