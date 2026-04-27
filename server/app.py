@@ -82,10 +82,10 @@ def movie_details():
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
-    # 1) Get the movie row (id, title, overview) by title
+    # 1) Get the movie row (id, title, overview, release year) by title
     #    (case-insensitive match on original_title)
     movie_query = """
-        SELECT id, original_title, overview
+        SELECT id, original_title, overview, release_date
         FROM movies_metadata
         WHERE LOWER(original_title) = LOWER(?)
         LIMIT 1;
@@ -123,6 +123,7 @@ def movie_details():
         "title": movie_row["original_title"],
         "original_title": movie_row["original_title"],
         "overview": movie_row["overview"],
+        "release_date": movie_row["release_date"],
         "average_rating": average_rating,
     })
 #get movies only with their ratings

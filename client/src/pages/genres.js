@@ -379,6 +379,13 @@ function Genres() {
                                     <Card.Subtitle className="mb-2 text-muted">ID: {selectedMovie.id}</Card.Subtitle>
 
                                     <Card.Text>
+                                        <strong>Release year: </strong>
+                                        {selectedMovie.release_date
+                                        ? new Date(selectedMovie.release_date).getFullYear()
+                                        : 'Unknown release date'}
+                                    </Card.Text>
+
+                                    <Card.Text>
                                         <strong>Average rating: </strong>
                                         {selectedMovie.average_rating !== undefined && selectedMovie.average_rating !== null
                                             ? Number.isFinite(selectedMovie.average_rating)
